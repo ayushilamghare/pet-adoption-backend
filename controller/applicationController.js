@@ -6,12 +6,12 @@ const User = require("../model/User");
 // POST /applications
 exports.applyForPet = async (req, res) => {
   try {
-    // only normal users can apply
-    if (req.user.role !== "adopter") {
-      return res.status(403).json({ message: "Only users can apply" });
+    // normal users or fosters can apply
+    if (req.user.role !== "adopter" && req.user.role !== "foster") {
+      return res.status(403).json({ message: "Only adopters and fosters can apply" });
     }
 
-    const { petId, answers } = req.body;
+    const { petId, answers, fosterDuration } = req.body;
 
     if (!petId) {
       return res.status(400).json({ message: "petId is required" });
@@ -36,22 +36,31 @@ exports.applyForPet = async (req, res) => {
       return res.status(400).json({ message: "Already applied for this pet" });
     }
 
+    if (req.user.role === "foster" && (!fosterDuration || !fosterDuration.value || !fosterDuration.unit)) {
+      return res.status(400).json({ message: "Foster duration is required" });
+    }
+
     // create application
     const application = await Application.create({
       user: req.user.id,
       pet: petId,
       type: pet.type, // 'adoption' or 'foster'
       shelter: pet.shelter,
-      answers
+      answers,
+      fosterDuration: req.user.role === "foster" ? fosterDuration : undefined
     });
     const shelter = await User.findById(pet.shelter);
 
     if (shelter?.email) {
-      await sendEmail(
-        shelter.email,
-        "New Application",
-        "You have a new adoption request"
-      );
+      try {
+        await sendEmail(
+          shelter.email,
+          "New Application",
+          "You have a new adoption request"
+        );
+      } catch (emailError) {
+        console.error("Failed to send application email to shelter:", emailError.message);
+      }
     }
 
     res.status(201).json(application);
@@ -135,11 +144,15 @@ exports.updateApplicationStatus = async (req, res) => {
     const applicant = await User.findById(application.user);
 
     if (applicant?.email) {
-      await sendEmail(
-        applicant.email,
-        "Application Update",
-        `Your application has been ${status}`
-      );
+      try {
+        await sendEmail(
+          applicant.email,
+          "Application Update",
+          `Your application has been ${status}`
+        );
+      } catch (emailError) {
+        console.error("Failed to send status update email to applicant:", emailError.message);
+      }
     }
 
     res.json(application);

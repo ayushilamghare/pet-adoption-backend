@@ -20,7 +20,6 @@ app.use("/api/pets", require("./routes/petRoutes"));
 app.use("/api/applications", require("./routes/applicationRoutes"));
 app.use("/api/messages", require("./routes/messageRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
-app.use("/api/foster", require("./routes/fosterRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 
 app.use((req, res) => {

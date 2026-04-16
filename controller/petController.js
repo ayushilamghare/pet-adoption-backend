@@ -44,6 +44,24 @@ exports.getPets = async (req, res) => {
     if (req.query.location) query.location = new RegExp(req.query.location, "i");
     if (req.query.status) query.status = req.query.status;
 
+    const jwt = require("jsonwebtoken");
+    const header = req.headers.authorization;
+    if (header && header.startsWith("Bearer ")) {
+      try {
+        const token = header.split(" ")[1];
+        if (process.env.JWT_SECRET) {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          if (decoded.role === "foster") {
+            query.type = "foster";
+          } else if (decoded.role === "adopter") {
+            query.type = "adoption";
+          }
+        }
+      } catch (err) {
+        // ignore invalid tokens for a public route
+      }
+    }
+
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
     const sortBy = ["createdAt", "age.value", "name"].includes(req.query.sortBy)

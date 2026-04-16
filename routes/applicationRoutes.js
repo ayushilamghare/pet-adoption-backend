@@ -11,8 +11,8 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
-router.post("/", authMiddleware, roleMiddleware("adopter"), applyForPet);
-router.get("/my", authMiddleware, roleMiddleware("adopter"), getMyApplications);
+router.post("/", authMiddleware, roleMiddleware("adopter", "foster"), applyForPet);
+router.get("/my", authMiddleware, roleMiddleware("adopter", "foster"), getMyApplications);
 router.get("/shelter", authMiddleware, roleMiddleware("shelter"), getShelterApplications);
 router.put("/:id", authMiddleware, roleMiddleware("shelter"), updateApplicationStatus);
 

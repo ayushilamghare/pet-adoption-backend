@@ -36,6 +36,14 @@ const ApplicationSchema = new mongoose.Schema({
     of: String
   },
 
+  fosterDuration: {
+    value: Number,
+    unit: {
+      type: String,
+      enum: ["hours", "days", "months"]
+    }
+  },
+
   scheduledMeet: Date,
   shelterNote: String,
 

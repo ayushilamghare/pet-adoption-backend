@@ -7,6 +7,12 @@ const ReviewSchema = new mongoose.Schema({
     required: true
   },
 
+  pet: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Pet",
+    required: true
+  },
+
   shelter: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -28,7 +34,6 @@ const ReviewSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// Prevent duplicate reviews
-ReviewSchema.index({ user: 1, shelter: 1 }, { unique: true });
+// Removed strict duplicate index directly tying to user and shelter
 
 module.exports = mongoose.model("Review", ReviewSchema);
