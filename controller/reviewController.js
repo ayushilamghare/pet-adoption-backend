@@ -25,15 +25,6 @@ exports.addReview = async (req, res) => {
       return res.status(404).json({ message: "Pet not found" });
     }
 
-    const existingReview = await Review.findOne({
-      user: req.user.id,
-      pet: petId
-    });
-
-    if (existingReview) {
-      return res.status(400).json({ message: "You already reviewed this pet" });
-    }
-
     const review = await Review.create({
       user: req.user.id,
       pet: petId,

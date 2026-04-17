@@ -169,6 +169,12 @@ exports.updateApplicationStatus = async (req, res) => {
         application.pet.fosterParent = application.user;
       }
       await application.pet.save();
+
+      // Automatically reject other active applications for this pet
+      await Application.updateMany(
+        { pet: application.pet._id, _id: { $ne: application._id }, status: { $nin: ["rejected", "approved"] } },
+        { $set: { status: "rejected", shelterNote: "This pet has been adopted by another applicant." } }
+      );
     }
 
     const applicant = await User.findById(application.user);
