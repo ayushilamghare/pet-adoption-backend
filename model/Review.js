@@ -34,6 +34,6 @@ const ReviewSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// Removed strict duplicate index directly tying to user and shelter
+ReviewSchema.index({ user: 1, pet: 1 }, { unique: true });
 
 module.exports = mongoose.model("Review", ReviewSchema);
