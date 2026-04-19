@@ -1,5 +1,13 @@
 const Pet = require("../model/Pet");
 
+const isValidURL = (urlStr) => {
+  try {
+    const url = new URL(urlStr);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 // POST /pets
 exports.createPet = async (req, res) => {
   try {
@@ -14,21 +22,54 @@ exports.createPet = async (req, res) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Pet name is required" });
     }
-    if (name.trim().length < 2) {
-      return res.status(400).json({ message: "Pet name must be at least 2 characters" });
+    const nameStr = name.trim();
+    if (nameStr.length < 2 || nameStr.length > 50) {
+      return res.status(400).json({ message: "Pet name must be between 2 and 50 characters" });
     }
+    
     if (!breed || !breed.trim()) {
       return res.status(400).json({ message: "Breed is required" });
     }
+    const breedStr = breed.trim();
+    if (breedStr.length > 50) {
+      return res.status(400).json({ message: "Breed must be at most 50 characters" });
+    }
+    if (!/^[a-zA-Z\s]+$/.test(breedStr)) {
+      return res.status(400).json({ message: "Breed can only contain letters" });
+    }
+
     if (!location || !location.trim()) {
       return res.status(400).json({ message: "Location is required" });
     }
+    const locStr = location.trim();
+    if (locStr.length < 2 || locStr.length > 100) {
+      return res.status(400).json({ message: "Location must be between 2 and 100 characters" });
+    }
+    if (!/^[a-zA-Z\s\-,]+$/.test(locStr)) {
+      return res.status(400).json({ message: "Location must be a valid city name" });
+    }
+
     if (age === undefined || age === null || (typeof age === "object" && (age.value === undefined || age.value === ""))) {
       return res.status(400).json({ message: "Age is required" });
     }
     const ageValue = typeof age === "object" ? Number(age.value) : Number(age);
+    const ageUnit = typeof age === "object" ? age.unit : "years";
     if (isNaN(ageValue) || ageValue < 0) {
       return res.status(400).json({ message: "Age must be a non-negative number" });
+    }
+    if (ageUnit === "years" && ageValue > 30) return res.status(400).json({ message: "Max age is 30 years" });
+    if (ageUnit === "months" && ageValue > 360) return res.status(400).json({ message: "Max age is 360 months" });
+    if (ageUnit === "days" && ageValue > 10950) return res.status(400).json({ message: "Max age is 10950 days" });
+
+    if (req.body.images && Array.isArray(req.body.images)) {
+      for (const img of req.body.images) {
+        if (!isValidURL(img)) return res.status(400).json({ message: "One or more photo URLs are invalid" });
+      }
+    }
+    if (req.body.videos && Array.isArray(req.body.videos)) {
+      for (const vid of req.body.videos) {
+        if (!isValidURL(vid)) return res.status(400).json({ message: "One or more video URLs are invalid" });
+      }
     }
     if (!size) {
       return res.status(400).json({ message: "Size is required" });
@@ -144,20 +185,53 @@ exports.updatePet = async (req, res) => {
       if (!updates.name || !updates.name.trim()) {
         return res.status(400).json({ message: "Pet name cannot be empty" });
       }
-      if (updates.name.trim().length < 2) {
-        return res.status(400).json({ message: "Pet name must be at least 2 characters" });
+      const nameStr = updates.name.trim();
+      if (nameStr.length < 2 || nameStr.length > 50) {
+        return res.status(400).json({ message: "Pet name must be between 2 and 50 characters" });
       }
     }
-    if (updates.breed !== undefined && (!updates.breed || !updates.breed.trim())) {
-      return res.status(400).json({ message: "Breed cannot be empty" });
+    if (updates.breed !== undefined) {
+      const breedStr = updates.breed.trim();
+      if (!breedStr) {
+        return res.status(400).json({ message: "Breed cannot be empty" });
+      }
+      if (breedStr.length > 50) {
+        return res.status(400).json({ message: "Breed must be at most 50 characters" });
+      }
+      if (!/^[a-zA-Z\s]+$/.test(breedStr)) {
+        return res.status(400).json({ message: "Breed can only contain letters" });
+      }
     }
-    if (updates.location !== undefined && (!updates.location || !updates.location.trim())) {
-      return res.status(400).json({ message: "Location cannot be empty" });
+    if (updates.location !== undefined) {
+      const locStr = updates.location.trim();
+      if (!locStr) {
+        return res.status(400).json({ message: "Location cannot be empty" });
+      }
+      if (locStr.length < 2 || locStr.length > 100) {
+        return res.status(400).json({ message: "Location must be between 2 and 100 characters" });
+      }
+      if (!/^[a-zA-Z\s\-,]+$/.test(locStr)) {
+        return res.status(400).json({ message: "Location must be a valid city name" });
+      }
     }
     if (updates.age !== undefined) {
       const ageValue = typeof updates.age === "object" ? Number(updates.age.value) : Number(updates.age);
+      const ageUnit = typeof updates.age === "object" ? updates.age.unit : "years";
       if (isNaN(ageValue) || ageValue < 0) {
         return res.status(400).json({ message: "Age must be a non-negative number" });
+      }
+      if (ageUnit === "years" && ageValue > 30) return res.status(400).json({ message: "Max age is 30 years" });
+      if (ageUnit === "months" && ageValue > 360) return res.status(400).json({ message: "Max age is 360 months" });
+      if (ageUnit === "days" && ageValue > 10950) return res.status(400).json({ message: "Max age is 10950 days" });
+    }
+    if (updates.images && Array.isArray(updates.images)) {
+      for (const img of updates.images) {
+        if (!isValidURL(img)) return res.status(400).json({ message: "One or more photo URLs are invalid" });
+      }
+    }
+    if (updates.videos && Array.isArray(updates.videos)) {
+      for (const vid of updates.videos) {
+        if (!isValidURL(vid)) return res.status(400).json({ message: "One or more video URLs are invalid" });
       }
     }
     if (updates.size && !["small", "medium", "large"].includes(updates.size)) {
