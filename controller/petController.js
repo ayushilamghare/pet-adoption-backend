@@ -38,6 +38,11 @@ exports.createPet = async (req, res) => {
       return res.status(400).json({ message: "Breed can only contain letters" });
     }
 
+    const colorStr = req.body.color ? req.body.color.trim() : "";
+    if (colorStr && !/^[a-zA-Z\s]+$/.test(colorStr)) {
+      return res.status(400).json({ message: "Color can only contain letters" });
+    }
+
     if (!location || !location.trim()) {
       return res.status(400).json({ message: "Location is required" });
     }
@@ -200,6 +205,12 @@ exports.updatePet = async (req, res) => {
       }
       if (!/^[a-zA-Z\s]+$/.test(breedStr)) {
         return res.status(400).json({ message: "Breed can only contain letters" });
+      }
+    }
+    if (updates.color !== undefined) {
+      const colorStr = updates.color.trim();
+      if (colorStr && !/^[a-zA-Z\s]+$/.test(colorStr)) {
+        return res.status(400).json({ message: "Color can only contain letters" });
       }
     }
     if (updates.location !== undefined) {
