@@ -8,13 +8,18 @@ exports.applyForPet = async (req, res) => {
   try {
     // normal users or fosters can apply
     if (req.user.role !== "adopter" && req.user.role !== "foster") {
-      return res.status(403).json({ message: "Only adopters and fosters can apply" });
+      return res.status(403).json({ message: "Only adopters and fosters can apply for pets" });
     }
 
     const { petId, answers, fosterDuration } = req.body;
 
     if (!petId) {
-      return res.status(400).json({ message: "petId is required" });
+      return res.status(400).json({ message: "Pet ID is required" });
+    }
+
+    // Validate answers note length if provided
+    if (answers && answers.note && answers.note.length > 1000) {
+      return res.status(400).json({ message: "Application note must be under 1000 characters" });
     }
 
     // check pet exists
@@ -24,7 +29,7 @@ exports.applyForPet = async (req, res) => {
     }
 
     if (pet.status !== "available") {
-      return res.status(400).json({ message: "This pet is not available for adoption" });
+      return res.status(400).json({ message: "This pet is not currently available for adoption" });
     }
 
     const existing = await Application.findOne({
@@ -33,11 +38,20 @@ exports.applyForPet = async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).json({ message: "Already applied for this pet" });
+      return res.status(400).json({ message: "You have already applied for this pet" });
     }
 
-    if (req.user.role === "foster" && (!fosterDuration || !fosterDuration.value || !fosterDuration.unit)) {
-      return res.status(400).json({ message: "Foster duration is required" });
+    if (req.user.role === "foster") {
+      if (!fosterDuration || fosterDuration.value === undefined || fosterDuration.value === "") {
+        return res.status(400).json({ message: "Foster duration is required" });
+      }
+      const durValue = Number(fosterDuration.value);
+      if (!Number.isInteger(durValue) || durValue <= 0) {
+        return res.status(400).json({ message: "Foster duration must be a positive whole number" });
+      }
+      if (!fosterDuration.unit || !["hours", "days", "months"].includes(fosterDuration.unit)) {
+        return res.status(400).json({ message: "Foster duration unit must be hours, days, or months" });
+      }
     }
 
     // create application

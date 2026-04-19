@@ -6,18 +6,25 @@ const User = require("../model/User");
 exports.addReview = async (req, res) => {
   try {
     if (req.user.role !== "adopter" && req.user.role !== "foster") {
-      return res.status(403).json({ message: "Only adopters and fosters can review pets" });
+      return res.status(403).json({ message: "Only adopters and fosters can leave reviews" });
     }
 
     const { petId, rating, comment } = req.body;
 
     if (!petId) {
-      return res.status(400).json({ message: "petId is required" });
+      return res.status(400).json({ message: "Pet ID is required" });
     }
 
     const numericRating = Number(rating);
     if (!numericRating || numericRating < 1 || numericRating > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      return res.status(400).json({ message: "Rating must be a number between 1 and 5" });
+    }
+
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ message: "Review comment is required" });
+    }
+    if (comment.trim().length < 10) {
+      return res.status(400).json({ message: "Review comment must be at least 10 characters" });
     }
 
     const pet = await Pet.findById(petId);
@@ -30,7 +37,7 @@ exports.addReview = async (req, res) => {
       pet: petId,
       shelter: pet.shelter,
       rating: numericRating,
-      comment
+      comment: comment.trim()
     });
 
     res.status(201).json(review);

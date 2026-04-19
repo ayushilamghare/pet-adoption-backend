@@ -12,23 +12,34 @@ exports.sendMessage = async (req, res) => {
   try {
     const { receiverId, message, relatedPetId } = req.body;
 
-    if (!receiverId || !message) {
-      return res.status(400).json({ message: "receiverId and message are required" });
+    if (!receiverId) {
+      return res.status(400).json({ message: "Recipient is required" });
     }
-
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({ message: "Invalid recipient" });
+    }
+    if (!message || !message.trim()) {
+      return res.status(400).json({ message: "Message cannot be empty" });
+    }
+    if (message.trim().length < 1) {
+      return res.status(400).json({ message: "Message cannot be empty" });
+    }
+    if (message.length > 2000) {
+      return res.status(400).json({ message: "Message is too long (max 2000 characters)" });
+    }
     if (receiverId === req.user.id) {
-      return res.status(400).json({ message: "You cannot message yourself" });
+      return res.status(400).json({ message: "You cannot send a message to yourself" });
     }
 
     const receiver = await User.findById(receiverId);
     if (!receiver) {
-      return res.status(404).json({ message: "Receiver not found" });
+      return res.status(404).json({ message: "Recipient not found" });
     }
 
     const newMessage = await Message.create({
       sender: req.user.id,
       receiver: receiverId,
-      message,
+      message: message.trim(),
       conversationId: getConversationId(req.user.id, receiverId),
       relatedPet: relatedPetId || null
     });

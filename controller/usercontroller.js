@@ -15,19 +15,42 @@ exports.getProfile = async (req, res) => {
 
 // UPDATE profile
 exports.updateProfile = async (req, res) => {
-  const user = await User.findById(req.user.id);
+  try {
+    const user = await User.findById(req.user.id);
 
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { name, phone, address } = req.body;
+
+    // Field-specific validation
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({ message: "Name cannot be empty" });
+      }
+      if (name.trim().length < 2) {
+        return res.status(400).json({ message: "Name must be at least 2 characters" });
+      }
+    }
+    if (phone !== undefined && phone.trim()) {
+      if (!/^[\d\s\-\+\(\)]{7,15}$/.test(phone.trim())) {
+        return res.status(400).json({ message: "Phone must be 7–15 characters (digits, spaces, dashes, and parentheses only)" });
+      }
+    }
+    if (address !== undefined && address.length > 200) {
+      return res.status(400).json({ message: "Address must be under 200 characters" });
+    }
+
+    if (name !== undefined) user.name = name.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+    if (address !== undefined) user.address = address.trim();
+
+    const updated = await user.save();
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update profile. Please try again." });
   }
-
-  user.name = req.body.name || user.name;
-  user.phone = req.body.phone || user.phone;
-  user.address = req.body.address || user.address;
-
-  const updated = await user.save();
-
-  res.json(updated);
 };
 
 // GET contacts

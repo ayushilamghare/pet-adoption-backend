@@ -12,24 +12,38 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, role = "adopter" } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required" });
+    // Field-specific validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Name is required" });
     }
-
+    if (name.trim().length < 2) {
+      return res.status(400).json({ message: "Name must be at least 2 characters" });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: "Email address is required" });
+    }
+    if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
     if (!["adopter", "shelter", "foster"].includes(role)) {
-      return res.status(400).json({ message: "Invalid role" });
+      return res.status(400).json({ message: "Role must be adopter, shelter, or foster" });
     }
 
-    // check if user exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "An account with this email already exists" });
     }
 
     const user = await User.create({
-      name,
-      email,
-      password, // Model handles hashing in pre-save hook
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
       role
     });
 
@@ -40,10 +54,9 @@ exports.register = async (req, res) => {
 
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "An account with this email already exists" });
     }
-
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Registration failed. Please try again." });
   }
 };
 
@@ -52,23 +65,26 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // check user
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: "Email address is required" });
+    }
+    if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "No account found with this email" });
     }
 
-    // compare password using model method
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Incorrect password. Please try again." });
     }
 
-    // create token
     const token = generateToken(user);
 
     res.json({
@@ -77,6 +93,6 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Login failed. Please try again." });
   }
 };

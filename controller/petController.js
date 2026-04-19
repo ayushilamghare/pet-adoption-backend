@@ -2,28 +2,50 @@ const Pet = require("../model/Pet");
 
 // POST /pets
 exports.createPet = async (req, res) => {
-  const { name, age, breed, size, type } = req.body;
-
-  if (!name || age === undefined || !breed || !size || !type) {
-    return res.status(400).json({ message: "Missing required fields" });
-  }
-
-  if (!["small", "medium", "large"].includes(size)) {
-    return res.status(400).json({ message: "Size must be small, medium, or large" });
-  }
-
-  if (!["adoption", "foster"].includes(type)) {
-    return res.status(400).json({ message: "Type must be adoption or foster" });
-  }
   try {
     // only shelter allowed
     if (req.user.role !== "shelter") {
-      return res.status(403).json({ message: "Only shelters can add pets" });
+      return res.status(403).json({ message: "Only shelters can add pet listings" });
+    }
+
+    const { name, age, breed, size, type, location } = req.body;
+
+    // Field-specific validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Pet name is required" });
+    }
+    if (name.trim().length < 2) {
+      return res.status(400).json({ message: "Pet name must be at least 2 characters" });
+    }
+    if (!breed || !breed.trim()) {
+      return res.status(400).json({ message: "Breed is required" });
+    }
+    if (!location || !location.trim()) {
+      return res.status(400).json({ message: "Location is required" });
+    }
+    if (age === undefined || age === null || (typeof age === "object" && (age.value === undefined || age.value === ""))) {
+      return res.status(400).json({ message: "Age is required" });
+    }
+    const ageValue = typeof age === "object" ? Number(age.value) : Number(age);
+    if (isNaN(ageValue) || ageValue < 0) {
+      return res.status(400).json({ message: "Age must be a non-negative number" });
+    }
+    if (!size) {
+      return res.status(400).json({ message: "Size is required" });
+    }
+    if (!["small", "medium", "large"].includes(size)) {
+      return res.status(400).json({ message: "Size must be 'small', 'medium', or 'large'" });
+    }
+    if (!type) {
+      return res.status(400).json({ message: "Listing type is required" });
+    }
+    if (!["adoption", "foster"].includes(type)) {
+      return res.status(400).json({ message: "Listing type must be 'adoption' or 'foster'" });
     }
 
     const pet = await Pet.create({
       ...req.body,
-      shelter: req.user.id // link pet to logged-in shelter
+      shelter: req.user.id
     });
 
     res.status(201).json(pet);
@@ -110,7 +132,6 @@ exports.getPetById = async (req, res) => {
   }
 };
 
-
 // PUT /pets/:id
 exports.updatePet = async (req, res) => {
   try {
@@ -118,16 +139,35 @@ exports.updatePet = async (req, res) => {
     delete updates.shelter;
     delete updates.fosterParent;
 
+    // Field-specific validation for any provided fields
+    if (updates.name !== undefined) {
+      if (!updates.name || !updates.name.trim()) {
+        return res.status(400).json({ message: "Pet name cannot be empty" });
+      }
+      if (updates.name.trim().length < 2) {
+        return res.status(400).json({ message: "Pet name must be at least 2 characters" });
+      }
+    }
+    if (updates.breed !== undefined && (!updates.breed || !updates.breed.trim())) {
+      return res.status(400).json({ message: "Breed cannot be empty" });
+    }
+    if (updates.location !== undefined && (!updates.location || !updates.location.trim())) {
+      return res.status(400).json({ message: "Location cannot be empty" });
+    }
+    if (updates.age !== undefined) {
+      const ageValue = typeof updates.age === "object" ? Number(updates.age.value) : Number(updates.age);
+      if (isNaN(ageValue) || ageValue < 0) {
+        return res.status(400).json({ message: "Age must be a non-negative number" });
+      }
+    }
     if (updates.size && !["small", "medium", "large"].includes(updates.size)) {
-      return res.status(400).json({ message: "Size must be small, medium, or large" });
+      return res.status(400).json({ message: "Size must be 'small', 'medium', or 'large'" });
     }
-
     if (updates.type && !["adoption", "foster"].includes(updates.type)) {
-      return res.status(400).json({ message: "Type must be adoption or foster" });
+      return res.status(400).json({ message: "Listing type must be 'adoption' or 'foster'" });
     }
-
     if (updates.status && !["available", "adopted", "fostered"].includes(updates.status)) {
-      return res.status(400).json({ message: "Invalid pet status" });
+      return res.status(400).json({ message: "Status must be 'available', 'adopted', or 'fostered'" });
     }
 
     const pet = await Pet.findById(req.params.id);
@@ -136,9 +176,8 @@ exports.updatePet = async (req, res) => {
       return res.status(404).json({ message: "Pet not found" });
     }
 
-    // only the shelter who created it can update
     if (pet.shelter.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized" });
+      return res.status(403).json({ message: "You are not authorized to edit this listing" });
     }
 
     const updatedPet = await Pet.findByIdAndUpdate(
@@ -162,14 +201,13 @@ exports.deletePet = async (req, res) => {
       return res.status(404).json({ message: "Pet not found" });
     }
 
-    // only shelter can delete its own pet
     if (pet.shelter.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized" });
+      return res.status(403).json({ message: "You are not authorized to delete this listing" });
     }
 
     await pet.deleteOne();
 
-    res.json({ message: "Pet removed" });
+    res.json({ message: "Pet listing removed successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
