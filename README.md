@@ -2,6 +2,8 @@
 
 The backend API for the Adoptly pet adoption platform. Built with Node.js, Express, and MongoDB.
 
+📖 **[View API Documentation](./README.API.md)**
+
 ## 🛠 Tech Stack
 
 - Node.js
